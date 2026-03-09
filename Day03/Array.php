@@ -8,3 +8,9 @@
     foreach($fruits as $fruit)  {
         echo "$fruit <br>";
     }
+
+    //numberic Array
+
+    //Associated Array
+
+    //Multidimentional Array

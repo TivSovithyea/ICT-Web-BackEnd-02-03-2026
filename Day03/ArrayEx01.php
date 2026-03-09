@@ -15,3 +15,10 @@
     }
 
     echo $result;
+
+
+    $number;
+
+    if(isset($number)) {
+        echo "$number";
+    }
