@@ -2,7 +2,7 @@
 
     echo "Sum of digits of a number in factorial : ";
 
-    $number = 6;
+    $number = 5;
     $result = 1;
 
     while($number != 0) {
