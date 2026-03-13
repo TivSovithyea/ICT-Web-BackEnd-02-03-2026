@@ -11,7 +11,7 @@
 
         $stockCars = [
             [
-                "code" => "002",
+                "code   " => "002",
                 "name" => "Volvo",
                 "stock" => 22,
                 "sold" => 18
