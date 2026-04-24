@@ -9,13 +9,15 @@ use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
-    public function index() {
+    public function index(Request $request) {
 
-        $categories = Category::select('id', 'name')->latest()->get();
+        $categories = Category::select('id', 'name')->whereLike('name', "%$request->search%" ?? '')->forPage($request->page ?? 1, $request->limit ?? 15)->get();
+        $total = Category::count();
         // $categories = DB::select("SELECT * FROM categories");
 
         return response()->json([
-            'data' => $categories
+            'data' => $categories,
+            'total' => $total
         ]);
 
     }
@@ -44,6 +46,46 @@ class CategoryController extends Controller
                 'message' => $e->getMessage()
             ], 422);
 
+        }
+    }
+
+    public function show($id) {
+        // dd($id);
+        // $category = Category::findOrFail($id);
+
+        $category = Category::where('id', $id)->first();
+
+        return response()->json([
+            'data' => $category
+        ]);
+    }
+
+    public function update($id, StoreCategoryRequest $request) {
+
+        Category::findOrFail($id)->update($request->validated());
+
+        return response()->json([
+            'message' => "Successfully updated Category",
+            'data' => Category::findOrFail($id)
+        ]);
+    }
+
+    public function destroy($id) {
+        // Category::findOrFail($id)->delete();
+
+        $category = Category::destroy($id);
+
+        // $category = Category::where('id', $id)->delete();
+
+        if($category) {
+            // $category->delete();
+            return response()->json([
+                'message' => "Successfully deleted Category"
+            ]);
+        } else {
+            return response()->json([
+                'message' => "Category not found"
+            ], 404);
         }
     }
 }
