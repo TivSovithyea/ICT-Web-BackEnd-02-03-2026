@@ -13,7 +13,10 @@ class BrandController extends Controller
      */
     public function index(Request $request)
     {
-        $brands = Brand::select('id', 'name')->whereLike('name', "%$request->search%" ?? '')->forPage($request->page ?? 1, $request->limit ?? 15)->get();
+        $brands = Brand::select('id', 'name')
+            ->whereLike('name', "%$request->search%" ?? '')
+            ->with('products')
+            ->forPage($request->page ?? 1, $request->limit ?? 15)->get();
         $total = Brand::count();
 
         return response()->json([

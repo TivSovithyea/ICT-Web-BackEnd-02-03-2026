@@ -6,6 +6,7 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Throwable;
 
 class ProductController extends Controller
@@ -13,9 +14,31 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+
+        $data = Product::select("id", "name", "price", "image", "brand_id", "category_id")
+            ->with(["category", "brand"])
+            ->whereLike("name", "%$request->search%" ?? "");
+
+        if($request->brand_id) {
+            $data = $data->where('brand_id', $request->brand_id);
+        }
+
+        if($request->category_id) {
+            $data = $data->where('category_id', $request->category_id);
+        }
+
+        $data->forPage($request->page ?? 1, $request->limit ?? 15);
+
+        $products = $data->get();
+        $total = Product::count();
+
+        return response()->json([
+            'data' => $products,
+            'total' => $total
+        ]);
+
     }
 
     /**
@@ -36,10 +59,12 @@ class ProductController extends Controller
 
         try {
 
-            $path = $request->file('image')->store('images', 'public');
+            if($request->file('image')) {
+                $path = $request->file('image')->store('images', 'public');
+            }
 
             $product = Product::create(
-                ['image' => $path] + $request->validated()
+                ['image' => $path ?? null] + $request->validated()
             );
 
             DB::commit();
@@ -64,6 +89,10 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         //
+
+        //if function the same parameter no need to call findOrFail
+        //$product->load(['category', 'brand']);
+        //return json $product
     }
 
     /**
@@ -80,6 +109,15 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product)
     {
         //
+
+        //if $request->image then save image to API else do nothing
+        // if $request->image also delete existing image in API
+
+        //$product->name = $request->name;
+        //$product->price = $request->price;
+        //$product->description = $request->description;
+        //if $request->image then ($product->image = $request->imagePath;) else do nothing
+        //save to db
     }
 
     /**
@@ -87,6 +125,7 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        //
+        // if $product->image also delete existing image in API
+        // $product->delete();
     }
 }
