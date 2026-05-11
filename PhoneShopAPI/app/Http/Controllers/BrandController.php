@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreBrandRequest;
 use App\Models\Brand;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BrandController extends Controller
 {
@@ -13,6 +14,7 @@ class BrandController extends Controller
      */
     public function index(Request $request)
     {
+      //  dd(Auth::user());
         $brands = Brand::select('id', 'name')
             ->whereLike('name', "%$request->search%" ?? '')
             ->with('products')

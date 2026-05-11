@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Product;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ProductController extends Controller
@@ -16,27 +17,35 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
+        $search = trim((string) $request->query('search', ''));
+        $page = max((int) $request->query('page', 1), 1);
+        $limit = (int) $request->query('limit', 15);
+        $limit = $limit > 0 ? min($limit, 100) : 15;
 
-        $data = Product::select("id", "name", "price", "image", "brand_id", "category_id")
-            ->with(["category", "brand"])
-            ->whereLike("name", "%$request->search%" ?? "");
+        $query = Product::query()
+            ->select('id', 'name', 'price', 'image', 'brand_id', 'category_id')
+            ->with([
+                'category:id,name',
+                'brand:id,name',
+            ])
+            ->when($search !== '', function ($builder) use ($search) {
+                $builder->whereLike('name', "%{$search}%");
+            })
+            ->when($request->filled('brand_id'), function ($builder) use ($request) {
+                $builder->where('brand_id', $request->brand_id);
+            })
+            ->when($request->filled('category_id'), function ($builder) use ($request) {
+                $builder->where('category_id', $request->category_id);
+            });
 
-        if($request->brand_id) {
-            $data = $data->where('brand_id', $request->brand_id);
-        }
-
-        if($request->category_id) {
-            $data = $data->where('category_id', $request->category_id);
-        }
-
-        $data->forPage($request->page ?? 1, $request->limit ?? 15);
-
-        $products = $data->get();
-        $total = Product::count();
+        $total = (clone $query)->count();
+        $products = $query
+            ->forPage($page, $limit)
+            ->get();
 
         return response()->json([
             'data' => $products,
-            'total' => $total
+            'total' => $total,
         ]);
 
     }
@@ -59,7 +68,7 @@ class ProductController extends Controller
 
         try {
 
-            if($request->file('image')) {
+            if ($request->file('image')) {
                 $path = $request->file('image')->store('images', 'public');
             }
 
@@ -70,14 +79,15 @@ class ProductController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => "Successfully created Product",
-                'data' => $product
+                'message' => 'Successfully created Product',
+                'data' => $product,
             ], 201);
 
-        } catch(Throwable $ex) {
+        } catch (Throwable $ex) {
             DB::rollBack();
+
             return response()->json([
-                'message' => $ex->getMessage()
+                'message' => $ex->getMessage(),
             ], 422);
         }
 
@@ -88,11 +98,12 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        //
-
-        //if function the same parameter no need to call findOrFail
-        //$product->load(['category', 'brand']);
-        //return json $product
+        return response()->json([
+            'data' => $product->load([
+                'category:id,name',
+                'brand:id,name',
+            ]),
+        ]);
     }
 
     /**
@@ -108,16 +119,26 @@ class ProductController extends Controller
      */
     public function update(UpdateProductRequest $request, Product $product)
     {
-        //
+        $data = $request->validated();
 
-        //if $request->image then save image to API else do nothing
-        // if $request->image also delete existing image in API
+        if ($request->hasFile('image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $data['image'] = $request->file('image')->store('images', 'public');
+        }
 
-        //$product->name = $request->name;
-        //$product->price = $request->price;
-        //$product->description = $request->description;
-        //if $request->image then ($product->image = $request->imagePath;) else do nothing
-        //save to db
+        if (($request->boolean('image_remove')) && $product->image) {
+            Storage::disk('public')->delete($product->image);
+            $data['image'] = null;
+        }
+
+        $product->update($data);
+
+        return response()->json([
+            'data' => $product,
+            'message' => 'Successfully updated Product',
+        ], 200);
     }
 
     /**
@@ -125,7 +146,14 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        // if $product->image also delete existing image in API
-        // $product->delete();
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
+        }
+
+        $product->delete();
+
+        return response()->json([
+            'message' => 'Successfully deleted Product',
+        ]);
     }
 }
