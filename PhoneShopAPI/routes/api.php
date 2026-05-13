@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,7 +14,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('brands', BrandController::class);
     Route::apiResource('products', ProductController::class);
-
+    Route::post("orders", [OrderController::class, 'store']);
 });
 
 Route::post('/register', [AuthController::class, 'register']);
